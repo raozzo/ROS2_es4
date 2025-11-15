@@ -22,15 +22,13 @@ def generate_launch_description():
     #Launch for the server
     turtlenode_server = Node(
         package='group14_ex4',
-        executable='turtlenode_server',  # <-- This must match your CMakeLists.txt executable name
-        name='turtlenode_server',
+        executable='turtlenode_server',  
         output='screen'  # Shows print/log statements in the terminal
     )
 
     #Launch for the clinet
     burrow_client = Node(
         package='group14_ex4',
-        executable='burrow_client',  # <-- This must match your CMakeLists.txt executable name
         name='burrow_client',
         output='screen'
     )
