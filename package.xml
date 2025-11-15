@@ -3,8 +3,8 @@
 <package format="3">
   <name>group14_ex4</name>
   <version>0.0.0</version>
-  <description>TODO: Package description</description>
-  <maintainer email="luca@todo.todo">luca</maintainer>
+  <description>Exercize 4 </description>
+  <maintainer email="rao.luca@studenti.unipd.it">Rao Luca</maintainer>
   <license>Apache-2.0</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
