@@ -8,7 +8,7 @@
 #include "geometry_msgs/msg/pose.hpp"
 #include "turtle_interfaces/srv/find_apples.hpp"
 
-class TurtlebotServer : public rclcpp::Node
+class TurtlenodeServer : public rclcpp::Node
 {
   public:
   using FindApples = turtle_interfaces::srv::FindApples;
@@ -16,20 +16,20 @@ class TurtlebotServer : public rclcpp::Node
   //constructor
   TurtlenodeServer():Node("turtlenode_server")
   {
-    //TODO why use the placeholder 1 and 2
-    //
+    
     this->srv_ = this->create_service<FindApples>(
         "find_apples",
-        std::bind(&TurtlebotServer::find_apples_callback, this, _1, _2));
+        [this](const std::shared_ptr<FindApples::Request> request,
+               std::shared_ptr<FindApples::Response> response) {
+            this->find_apples_callback(request, response);
+        });
 
     this->scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
         "/scan",
         10,
-        std::bind(&TurtlebotServer::scan_callback, this, _1));
-
-    this->apple_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
-         "/apples", 10);
-
+        [this](const sensor_msgs::msg::LaserScan::SharedPtr msg) {
+            this->scan_callback(msg);
+        })
     // Initialize the apple count
     this->visible_apples_ = 0;
         
@@ -108,11 +108,11 @@ class TurtlebotServer : public rclcpp::Node
     //3. select cluster based on number of points / size / by curvature
     //
     //
-    const double CLUSTER_TRESHOLD = 0.15; 
-    
-    //TODO tune this prams
+    const double CLUSTER_THRESHOLD = 0.15; 
     const int MIN_CLUSTER_POINTS = 3;
     const int MAX_CLUSTER_POINTS = 15;
+    const double MAX_APPLE_SPAN = 0.3;       // 30cm
+    const double CONVEXITY_THRESHOLD = 0.01; // 1cm
 
     //vector of  filtered cluster (only those cluster that have enough number of points and not too much)
     std::vector<std::vector<Point>> filtered_cluster;
@@ -130,7 +130,7 @@ class TurtlebotServer : public rclcpp::Node
 
       //cartesian conversion
       //validity check on received ranges
-      if (range < msg->range_min || range > msg->range_max || std:isinf(range))
+      if (range < msg->range_min || range > msg->range_max || std::isinf(range))
       {
         //the idea is that i receive an invalid point and i'm in a cluster i save it, else i continue 
 
@@ -173,7 +173,7 @@ class TurtlebotServer : public rclcpp::Node
       double distance = std::sqrt(pow(dist_x,2)+pow(dist_y,2));
       
       //if the distance is small enough i add to the cluster else i end the previous one and start a new one
-      if (distance < CLUSTER_TRESHOLD) 
+      if (distance < CLUSTER_THRESHOLD) 
       {
         current_cluster.push_back(current_point);
       }
@@ -209,7 +209,10 @@ class TurtlebotServer : public rclcpp::Node
     //2. have to compute the midpoint to send it to the pose message 
     
     int apple_count = 0; 
-    
+    auto pose_array_msg = std::make_unique<geometry_msgs::msg::PoseArray>();
+    pose_array_msg->header.frame_id = msg->header.frame_id;
+    pose_array_msg->header.stamp = this->get_clock()->now();
+
     //i can use two method to check if a cluster it's an apple: it's dimension and if small enough i can check if it's an arc
     for(const auto& cluster: filtered_cluster)
     {
@@ -247,6 +250,10 @@ class TurtlebotServer : public rclcpp::Node
 
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, 
                         "Found %d apples.", apple_count);
+
+    this->visible_apples_ = apple_count;
+    this->apple_pub_->publish(std::move(pose_array_msg));
+
   }
 
   void find_apples_callback( const std::shared_ptr<FindApples::Request> request,
@@ -283,7 +290,7 @@ int main(int argc, char * argv[])
     rclcpp::init(argc, argv);
     
     // Create and spin the server node
-    auto turtle_server = std::make_shared<TurtlebotServer>();
+    auto turtle_server = std::make_shared<TurtlenodeServer>();
     rclcpp::spin(turtle_server);
     
     rclcpp::shutdown();

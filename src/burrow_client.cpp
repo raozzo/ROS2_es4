@@ -63,7 +63,7 @@ class BurrowClient : public rclcpp::Node
     //make the request to the server 
     auto request = std::make_shared<FindApples::Request>();
     request->burrow_size = s;
-    request->cøurrent_apples = n;
+    request->current_apples = n;
 
     auto response_callback = [this](rclcpp::Client<FindApples>::SharedFuture future) 
     {
@@ -89,10 +89,15 @@ class BurrowClient : public rclcpp::Node
     client_->async_send_request(request, response_callback);
   }
 
+  rclcpp::Client<FindApples>::SharedPtr client_;
+  rclcpp::TimerBase::SharedPtr timer_;
 }; //burrow client node end
 
-int int main (int argc, char *argv[]) {
-  
+int main (int argc, char *argv[]) {
+  rclcpp::init(argc, argv);
+  auto burrow_client_node = std::make_shared<BurrowClient>();
+  rclcpp::spin(burrow_client_node);
+  rclcpp::shutdown();
   return 0;
 }
 
