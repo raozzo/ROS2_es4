@@ -45,8 +45,32 @@ class TurtlebotServer : public rclcpp::Node
 
 void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
-    //lodar logic 
+    //lodar logic
+    //the idea is ""cluster"" point provided by the lidar and then 
+    //count only those cluster that resemble an arc in 2D space (->sphere in 3d space)
+    //
+    //TODO
+    //1. convert in cartesian coordinates
+    //2. cluster (i will try to cluster using only distance)
+    //3. select cluster based on number of points / size / by curvature
+    //
+    //
+    const double CLUSTER_TRESHOLD = 0.15; 
     
+    //TODO tune this prams
+    const int MIN_CLUSTER_POINTS = 3;
+    const int MAX_CLUSTER_POINTS = 15;
+
+    //vector of  filtered cluster (only those cluster that have enough number of points and not too much)
+    std::vector<std::vector<Point>> filtered_cluster;
+
+    //hold points of current cluster
+    std::vector<Point> current_cluster;
+
+    //center point 
+    Point last_point = {0,0}; 
+    
+
   }
 
   void find_apples_callback( const std::shared_ptr<FindApples::Request> request,
@@ -56,8 +80,8 @@ void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
       int s = request->burrow_size;
       int apples_needed = s - n;
       
-      RCLCPP_INFO(this->get_logger(),
-        "Incoming request: Burrow has %d apples. Needs %d.", n, apples_needed);
+      //report
+      RCLCPP_INFO(this->get_logger(), "Incoming request: Burrow has %d apples. Needs %d.", n, apples_needed);
 
       //change success bool if number of apple met 
       if (this->visible_apples_ >= apples_needed)
