@@ -43,7 +43,34 @@ class TurtlebotServer : public rclcpp::Node
     double y;
   };
 
-void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
+  struct ApplePosition {
+    double x, y;
+    bool success;
+  };
+
+  //the idea  is that it's an arc theac mid point should be closer to the turtlebot than the "corda"
+  bool is_arc(const std::vector<Point>& cluster, double threshold)
+  {
+    if (cluster.size<3) {
+      //not enough point
+      return false;  
+    }
+    
+    Point start_point = cluster.front();
+    Point end_point = cluster.back(); 
+    Point mid_point = cluster[cluster.size()/2]; 
+
+    Point corda_midpoint = 
+    {
+      (start_point.x + end_point.x)/2,
+      (start_point.y + end_point.y)/2,
+    };
+    double mid_point_range = std::sqrt(mid_point.x * mid_point.x + mid_point.y * mid_point.y);
+    double chord_midpoint_range = std::sqrt(corda_midpoint.x * corda_midpoint.x + corda_midpoint.y * corda_midpoint.y);
+    return (corda_midpoint_range - mid_point_range) > convexity_threshold;
+  }
+  
+  void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
     //lodar logic
     //the idea is ""cluster"" point provided by the lidar and then 
@@ -141,6 +168,46 @@ void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
       last_point=current_point;
     }
 
+
+    if (!current_cluster.empty()) 
+    {
+      if (current_cluster.size() >= MIN_CLUSTER_POINTS && current_cluster.size() <= MAX_CLUSTER_POINTS) 
+      {
+        filtered_clusters.push_back(current_cluster);
+      }
+    }
+    
+    //now that i have an array of fitered clusters
+  
+    //1. I have to decide if it's an apple 
+    //2. have to compute the midpoint to send it to the pose message 
+    
+    int apple_count = 0; 
+    
+    //i can use two method to check if a cluster it's an apple: it's dimension and if small enough i can check if it's an arc
+    for(const auto& cluster: filtered_cluster)
+    {
+      Point start_point = cluster.front();
+      Point end_point = cluster.back(); 
+
+      double dist_x = start_point.x - end_point.x; 
+      double dist_y = start_point.y - end_point.y; 
+      double cluster_span = std::sqrt(pow(dist_x,2)+pow(dist_y,2));
+
+      if (cluster_span > MAX_APPLE_SPAN) {
+        continue; //exit the for not an apple 
+      }
+      if (!is_arc(cluster, CONVEXITY_TRESHOLD)) {
+        //not an arc and thus not an apple
+        continue;
+      }
+      
+      //if i'm here it's an apple
+      apple_count++; 
+
+
+      //now i have to find a method to find the center position 
+    }
 
   }
 
