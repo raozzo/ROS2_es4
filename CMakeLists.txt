@@ -17,15 +17,20 @@ add_executable(turtlenode_server src/turtlenode_server.cpp)
 ament_target_dependencies(turtlenode_server
   "rclcpp"
   "group14_interfaces"
-  "sensor_msg"
-  "geometry_msg"
+  "sensor_msgs"
+  "geometry_msgs"
 )
 
 #client
 add_executable(burrow_client src/burrow_client.cpp) 
 ament_target_dependencies(burrow_client
   "rclcpp"
-  "group 14_interfaces"
+  "group14_interfaces"
+)
+
+install(DIRECTORY
+  launch
+  DESTINATION share/${PROJECT_NAME}
 )
 
 install(TARGETS
