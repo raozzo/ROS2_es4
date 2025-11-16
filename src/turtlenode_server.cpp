@@ -67,9 +67,80 @@ void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
     //hold points of current cluster
     std::vector<Point> current_cluster;
 
-    //center point 
-    Point last_point = {0,0}; 
-    
+    //to save te previous point 
+    Point last_point = {0,0};
+
+    //now i have to compute all the points i receive from laserscan
+    for (size_t i = 0; i< msg->ranges.size(); i++)
+    {
+      float range = msg -> ranges[i];
+
+      //cartesian conversion
+      //validity check on received ranges
+      if (range < msg->range_min || range > msg->range_max || std:isinf(range))
+      {
+        //the idea is that i receive an invalid point and i'm in a cluster i save it, else i continue 
+
+        if(!current_cluster.empty())
+        {
+          if(current_cluster.size()>= MIN_CLUSTER_POINTS && current_cluster.size()<= MAX_CLUSTER_POINTS)
+          {
+            //save the cluster in the vector of clusters 
+            filtered_cluster.push_back(current_cluster);
+          }
+
+          //if not a valid size
+          current_cluster.clear(); 
+        }
+
+        continue;
+      }
+      
+      //conversion in cartesian
+      //i have to get the angle usign the starting angle and current iteration
+      double angle = msg -> angle_min + (i*msg->angle_increment); 
+
+      Point current_point = {
+        range* std::cos(angle),
+        range*std::sin(angle)
+      };
+
+      //CLUSTERIGN
+      if(current_cluster.empty())
+      {
+        current_cluster.push_back(current_point);
+        last_point = current_point;
+        continue; 
+      }
+
+      //diatance from last point
+      double dist_x = current_point.x - last_point.x;
+      double dist_y = current_point.y - last_point.y;
+
+      double distance = std::sqrt(pow(dist_x,2)+pow(dist_y,2));
+      
+      //if the distance is small enough i add to the cluster else i end the previous one and start a new one
+      if (distance < CLUSTER_TRESHOLD) 
+      {
+        current_cluster.push_back(current_point);
+      }
+      else
+      {
+        if(current_cluster.size()>= MIN_CLUSTER_POINTS && current_cluster.size()<= MAX_CLUSTER_POINTS)
+          {
+            //save the cluster in the vector of clusters 
+            filtered_cluster.push_back(current_cluster);
+          }
+
+          //if not a valid size
+          current_cluster.clear();
+          //add to a new cluster
+          current_cluster.push_back(current_point);
+      }
+
+      last_point=current_point;
+    }
+
 
   }
 
