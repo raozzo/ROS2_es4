@@ -48,6 +48,32 @@ class TurtlebotServer : public rclcpp::Node
     bool success;
   };
 
+  //to find the position i keep the closer point to the robot 
+  // an alternative could be to use the mid point of the chord as an approximated center
+  ApplePosition find_apple_position(const std::vector<Point2D>& cluster)
+{
+    if (cluster.empty()) {
+        return {0, 0, false};
+    }
+
+    double min_range_sq = std::numeric_limits<double>::max();
+    Point2D closest_point = {0, 0};
+
+    // Iterate through all points in this one cluster
+    for (const auto& point : cluster)
+    {
+        // Calculate squared range (faster than sqrt)
+        double range_sq = point.x * point.x + point.y * point.y;
+        
+        if (range_sq < min_range_sq)
+        {
+            min_range_sq = range_sq;
+            closest_point = point;
+        }
+    }
+    return {closest_point.x, closest_point.y, true};
+}
+
   //the idea  is that it's an arc theac mid point should be closer to the turtlebot than the "corda"
   bool is_arc(const std::vector<Point>& cluster, double threshold)
   {
@@ -206,9 +232,21 @@ class TurtlebotServer : public rclcpp::Node
       apple_count++; 
 
 
-      //now i have to find a method to find the center position 
+      //now i have to find a method to find the center position
+      ApplePosition apple_pos = find_apple_position(cluster);
+      if (apple_pos.success) 
+      {
+        geometry_msgs::msg::Pose pose;
+        pose.position.x = apple_pos.x;
+        pose.position.y = apple_pos.y;
+        pose.position.z = 0.0;
+        pose.orientation.w = 1.0;
+        pose_array_msg->poses.push_back(pose);
+      }
     }
 
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, 
+                        "Found %d apples.", apple_count);
   }
 
   void find_apples_callback( const std::shared_ptr<FindApples::Request> request,
