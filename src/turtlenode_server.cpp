@@ -6,12 +6,12 @@
 #include "sensor_msgs/msg/laser_scan.hpp"
 #include "geometry_msgs/msg/pose_array.hpp"
 #include "geometry_msgs/msg/pose.hpp"
-#include "turtle_interfaces/srv/find_apples.hpp"
+#include "group14_interfaces/srv/apples.hpp"
 
 class TurtlenodeServer : public rclcpp::Node
 {
   public:
-  using FindApples = turtle_interfaces::srv::FindApples;
+  using FindApples = group14_interfaces::srv::Apples;
     
   //constructor
   TurtlenodeServer():Node("turtlenode_server")
@@ -50,14 +50,14 @@ class TurtlenodeServer : public rclcpp::Node
 
   //to find the position i keep the closer point to the robot 
   // an alternative could be to use the mid point of the chord as an approximated center
-  ApplePosition find_apple_position(const std::vector<Point2D>& cluster)
+  ApplePosition find_apple_position(const std::vector<Point>& cluster)
 {
     if (cluster.empty()) {
         return {0, 0, false};
     }
 
     double min_range_sq = std::numeric_limits<double>::max();
-    Point2D closest_point = {0, 0};
+    Point closest_point = {0, 0};
 
     // Iterate through all points in this one cluster
     for (const auto& point : cluster)
@@ -282,7 +282,7 @@ class TurtlenodeServer : public rclcpp::Node
             this->visible_apples_,
             response->success ? "true" : "false");
   }
-}
+};
 
 
 int main(int argc, char * argv[])
