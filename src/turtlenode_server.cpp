@@ -37,10 +37,16 @@ class TurtlebotServer : public rclcpp::Node
   }
 
   private:
-  void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
+  struct Point 
+  {
+    double x;
+    double y;
+  };
+
+void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
     //lodar logic 
-    //
+    
   }
 
   void find_apples_callback( const std::shared_ptr<FindApples::Request> request,
