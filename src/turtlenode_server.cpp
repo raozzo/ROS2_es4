@@ -29,7 +29,10 @@ class TurtlenodeServer : public rclcpp::Node
         10,
         [this](const sensor_msgs::msg::LaserScan::SharedPtr msg) {
             this->scan_callback(msg);
-        })
+        });
+
+    this->apple_pub_ = this->create_publisher<geometry_msgs::msg::PoseArray>(
+         "/apples", 10);
     // Initialize the apple count
     this->visible_apples_ = 0;
         
@@ -77,7 +80,7 @@ class TurtlenodeServer : public rclcpp::Node
   //the idea  is that it's an arc theac mid point should be closer to the turtlebot than the "corda"
   bool is_arc(const std::vector<Point>& cluster, double threshold)
   {
-    if (cluster.size<3) {
+    if (cluster.size()<3) {
       //not enough point
       return false;  
     }
@@ -92,8 +95,9 @@ class TurtlenodeServer : public rclcpp::Node
       (start_point.y + end_point.y)/2,
     };
     double mid_point_range = std::sqrt(mid_point.x * mid_point.x + mid_point.y * mid_point.y);
-    double chord_midpoint_range = std::sqrt(corda_midpoint.x * corda_midpoint.x + corda_midpoint.y * corda_midpoint.y);
-    return (corda_midpoint_range - mid_point_range) > convexity_threshold;
+    double corda_midpoint_range = std::sqrt(corda_midpoint.x * corda_midpoint.x + corda_midpoint.y * corda_midpoint.y);
+    return (corda_midpoint_range - mid_point_range) > threshold;
+
   }
   
   void scan_callback(const sensor_msgs::msg::LaserScan::SharedPtr msg)
@@ -108,14 +112,14 @@ class TurtlenodeServer : public rclcpp::Node
     //3. select cluster based on number of points / size / by curvature
     //
     //
-    const double CLUSTER_THRESHOLD = 0.15; 
+    const double CLUSTER_THRESHOLD = 0.20; 
     const int MIN_CLUSTER_POINTS = 3;
-    const int MAX_CLUSTER_POINTS = 15;
+    const int MAX_CLUSTER_POINTS = 10;
     const double MAX_APPLE_SPAN = 0.3;       // 30cm
     const double CONVEXITY_THRESHOLD = 0.01; // 1cm
 
     //vector of  filtered cluster (only those cluster that have enough number of points and not too much)
-    std::vector<std::vector<Point>> filtered_cluster;
+    std::vector<std::vector<Point>> filtered_clusters;
 
     //hold points of current cluster
     std::vector<Point> current_cluster;
@@ -139,7 +143,7 @@ class TurtlenodeServer : public rclcpp::Node
           if(current_cluster.size()>= MIN_CLUSTER_POINTS && current_cluster.size()<= MAX_CLUSTER_POINTS)
           {
             //save the cluster in the vector of clusters 
-            filtered_cluster.push_back(current_cluster);
+            filtered_clusters.push_back(current_cluster);
           }
 
           //if not a valid size
@@ -182,7 +186,7 @@ class TurtlenodeServer : public rclcpp::Node
         if(current_cluster.size()>= MIN_CLUSTER_POINTS && current_cluster.size()<= MAX_CLUSTER_POINTS)
           {
             //save the cluster in the vector of clusters 
-            filtered_cluster.push_back(current_cluster);
+            filtered_clusters.push_back(current_cluster);
           }
 
           //if not a valid size
@@ -214,7 +218,7 @@ class TurtlenodeServer : public rclcpp::Node
     pose_array_msg->header.stamp = this->get_clock()->now();
 
     //i can use two method to check if a cluster it's an apple: it's dimension and if small enough i can check if it's an arc
-    for(const auto& cluster: filtered_cluster)
+    for(const auto& cluster: filtered_clusters)
     {
       Point start_point = cluster.front();
       Point end_point = cluster.back(); 
@@ -226,7 +230,7 @@ class TurtlenodeServer : public rclcpp::Node
       if (cluster_span > MAX_APPLE_SPAN) {
         continue; //exit the for not an apple 
       }
-      if (!is_arc(cluster, CONVEXITY_TRESHOLD)) {
+      if (!is_arc(cluster, CONVEXITY_THRESHOLD)) {
         //not an arc and thus not an apple
         continue;
       }
@@ -277,11 +281,17 @@ class TurtlenodeServer : public rclcpp::Node
       }
        
       //log success and found apple
-      CLCPP_INFO(this->get_logger(),
+      RCLCPP_INFO(this->get_logger(),
             "Found %d apples. Responding: %s",
             this->visible_apples_,
             response->success ? "true" : "false");
   }
+
+  rclcpp::Service<FindApples>::SharedPtr srv_;
+  rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
+  rclcpp::Publisher<geometry_msgs::msg::PoseArray>::SharedPtr apple_pub_;
+  int visible_apples_;
+
 };
 
 

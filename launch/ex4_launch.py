@@ -3,6 +3,7 @@ from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.actions import IncludeLaunchDescription
+from launch_ros.actions import Node
 
 def generate_launch_description():
     
@@ -29,7 +30,7 @@ def generate_launch_description():
     #Launch for the clinet
     burrow_client = Node(
         package='group14_ex4',
-        name='burrow_client',
+        executable='burrow_client',
         output='screen'
     )
 
