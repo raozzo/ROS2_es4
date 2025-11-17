@@ -51,7 +51,9 @@ class TurtlenodeServer : public rclcpp::Node
     bool success;
   };
 
-  //to find the position i keep the closer point to the robot 
+  //to find the position i keep the closer point to the robot (the idea is that if i have 
+  //to reach the apple is sufficient to reach one of its external points) 
+  // 
   // an alternative could be to use the mid point of the chord as an approximated center
   ApplePosition find_apple_position(const std::vector<Point>& cluster)
 {
@@ -106,7 +108,7 @@ class TurtlenodeServer : public rclcpp::Node
     //the idea is ""cluster"" point provided by the lidar and then 
     //count only those cluster that resemble an arc in 2D space (->sphere in 3d space)
     //
-    //TODO
+    //IDEA
     //1. convert in cartesian coordinates
     //2. cluster (i will try to cluster using only distance)
     //3. select cluster based on number of points / size / by curvature
@@ -240,6 +242,7 @@ class TurtlenodeServer : public rclcpp::Node
 
 
       //now i have to find a method to find the center position
+      // the correct orientation could be computed if needed
       ApplePosition apple_pos = find_apple_position(cluster);
       if (apple_pos.success) 
       {
@@ -247,8 +250,13 @@ class TurtlenodeServer : public rclcpp::Node
         pose.position.x = apple_pos.x;
         pose.position.y = apple_pos.y;
         pose.position.z = 0.0;
-        pose.orientation.w = 1.0;
+        //pose.orientation.w = 1.0;
         pose_array_msg->poses.push_back(pose);
+        
+        //print position of each found apple
+        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 8, 
+                        "Found apples at %f ,%f", apple_pos.x,apple_pos.y);
+
       }
     }
 
